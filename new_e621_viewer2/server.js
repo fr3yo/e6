@@ -177,9 +177,7 @@ app.get('/api/comments/:postId', async (req, res) => {
         const results = limited.map(c => ({
           id: c.id,
           body: c.body || c.body_html || '',
-          creator_id: c.creator_id || null,
-          creator_name: c.creator_name || c.author || 'Unknown',
-          avatar_url: null
+          creator_name: c.creator_name || c.author || 'Unknown'
         }));
 
         // Enrich avatars (best-effort, limited to avoid stalling comment loads)
