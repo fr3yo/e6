@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const AVATAR_LOOKUP_LIMIT = 10;
 
 // Serve static files
 app.use(express.static('public'));
@@ -181,21 +182,34 @@ app.get('/api/comments/:postId', async (req, res) => {
           avatar_url: null
         }));
 
-        // Enrich avatars (best-effort)
-        for (const item of results) {
-          if (!item.creator_id) continue;
-          try {
-            const ur = await fetch(`https://e621.net/users/${item.creator_id}.json`, { headers });
-            if (!ur.ok) continue;
+        // Enrich avatars (best-effort, limited to avoid stalling comment loads)
+        const avatarIds = Array.from(new Set(results
+          .map(item => item.creator_id)
+          .filter(Boolean)))
+          .slice(0, AVATAR_LOOKUP_LIMIT);
 
-            const uText = await ur.text();
-            let uJson = null;
-            try { uJson = JSON.parse(uText); } catch { continue; }
+        if (avatarIds.length) {
+          const avatars = await Promise.all(avatarIds.map(async (creatorId) => {
+            try {
+              const ur = await fetch(`https://e621.net/users/${creatorId}.json`, { headers, timeout: 6000 });
+              if (!ur.ok) return [creatorId, null];
 
-            const u = uJson.user || uJson;
-            item.avatar_url = u?.avatar_url || u?.avatar?.url || u?.avatar || null;
-          } catch {
-            // ignore
+              const uText = await ur.text();
+              let uJson = null;
+              try { uJson = JSON.parse(uText); } catch { return [creatorId, null]; }
+
+              const u = uJson.user || uJson;
+              return [creatorId, u?.avatar_url || u?.avatar?.url || u?.avatar || null];
+            } catch {
+              return [creatorId, null];
+            }
+          }));
+
+          const avatarMap = Object.fromEntries(avatars);
+          for (const item of results) {
+            if (item.creator_id && avatarMap[item.creator_id]) {
+              item.avatar_url = avatarMap[item.creator_id];
+            }
           }
         }
 
