@@ -19,6 +19,26 @@ let loading = false;
 let isForceScrolling = false;
 let isMobile = false;
 
+function captureScrollAnchor() {
+  const cards = getCards();
+  if (!cards.length) return null;
+
+  const idx = getCurrentIndexInFeed();
+  const card = cards[idx];
+  if (!card) return null;
+
+  const offset = feed.scrollTop - card.offsetTop;
+  return { id: card.dataset.postId, offset };
+}
+
+function restoreScrollAnchor(anchor) {
+  if (!anchor) return;
+  const cards = getCards();
+  const card = cards.find(c => c.dataset.postId === anchor.id);
+  if (!card) return;
+  feed.scrollTop = card.offsetTop + anchor.offset;
+}
+
 function escapeHtml(s) {
   return (s ?? '').toString()
     .replaceAll('&', '&amp;')
@@ -80,6 +100,7 @@ function scrollToCardIndex(i) {
 async function fetchPosts() {
   if (loading) return;
   loading = true;
+  const anchor = captureScrollAnchor();
 
   try {
     const resp = await fetch(`/api/posts?tags=${encodeURIComponent(DEFAULT_TAGS)}&page=${currentPage}&limit=${POSTS_PER_PAGE}`);
@@ -97,6 +118,7 @@ async function fetchPosts() {
       addPost(post);
     }
 
+    restoreScrollAnchor(anchor);
     currentPage += 1;
   } catch {
     // ignore
@@ -291,14 +313,6 @@ async function toggleComments(card, postId) {
     for (const c of data) {
       const row = document.createElement('div');
       row.className = 'comment';
-
-      if (c.avatar_url) {
-        const img = document.createElement('img');
-        img.className = 'comment-avatar';
-        img.src = c.avatar_url;
-        img.alt = '';
-        row.appendChild(img);
-      }
 
       const text = document.createElement('div');
       text.className = 'comment-text';

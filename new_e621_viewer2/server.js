@@ -176,28 +176,8 @@ app.get('/api/comments/:postId', async (req, res) => {
         const results = limited.map(c => ({
           id: c.id,
           body: c.body || c.body_html || '',
-          creator_id: c.creator_id || null,
-          creator_name: c.creator_name || c.author || 'Unknown',
-          avatar_url: null
+          creator_name: c.creator_name || c.author || 'Unknown'
         }));
-
-        // Enrich avatars (best-effort)
-        for (const item of results) {
-          if (!item.creator_id) continue;
-          try {
-            const ur = await fetch(`https://e621.net/users/${item.creator_id}.json`, { headers });
-            if (!ur.ok) continue;
-
-            const uText = await ur.text();
-            let uJson = null;
-            try { uJson = JSON.parse(uText); } catch { continue; }
-
-            const u = uJson.user || uJson;
-            item.avatar_url = u?.avatar_url || u?.avatar?.url || u?.avatar || null;
-          } catch {
-            // ignore
-          }
-        }
 
         return res.json(results);
       } catch (e) {

@@ -169,14 +169,6 @@ body.mobile .post-info {
   margin-bottom: 14px;
 }
 
-.comment-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  object-fit: cover;
-  flex: 0 0 auto;
-}
-
 .comment-text { flex: 1; }
 .comment-author { font-weight: 700; margin-bottom: 4px; }
 .comment-body { opacity: 0.95; }
